@@ -26,7 +26,7 @@ const UserController = {
 
       const png = jdenticon.toPng(name, 200);
       const avatarName = `${name}_${Date.now()}.png`;
-      const avatarPath = path.join(__dirname, "../uploads", avatarName);
+      const avatarPath = path.join(__dirname, "/../uploads", avatarName);
       fs.writeFileSync(avatarPath, png);
 
       const user = await prisma.user.create({
@@ -34,7 +34,7 @@ const UserController = {
           email,
           password: hashedPassword,
           name,
-          avatarUrl: `/uploads/${avatarPath}`
+          avatarUrl: `/uploads/${avatarName}`
         }
       });
 
@@ -149,7 +149,34 @@ const UserController = {
     }
   },
   current: async (req, res) => {
-    res.send("current");
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          id: req.user.userId
+        },
+        include: {
+          followers: {
+            include: {
+              follower: true
+            }
+          },
+          following: {
+            include: {
+              following: true
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        return res.status(400).json({ error: "Не удалось найти пользователя" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.log("Login error", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
